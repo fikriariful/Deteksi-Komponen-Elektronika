@@ -18,7 +18,7 @@
 
 **ElectroCom61** adalah sistem deteksi objek berbasis *computer vision* yang dirancang untuk mengenali **61 jenis komponen elektronika** secara otomatis melalui kamera. Sistem ini ditujukan untuk digunakan pada konveyor treadmill di laboratorium elektronika, di mana setiap komponen yang melintas akan dideteksi, diidentifikasi, dan dicatat secara otomatis ke dalam database.
 
-Proyek ini merupakan bagian dari penelitian Tugas Akhir di **Universitas Riau**, Program Studi Teknik Elektro.
+Proyek ini merupakan bagian dari penelitian Tugas Akhir di **Universitas Riau**, Program Studi Teknik Informatika.
 
 ### Fitur Utama
 - ✅ Deteksi real-time menggunakan YOLOv8n (model ringan, cocok untuk Raspberry Pi 4)
@@ -70,7 +70,7 @@ electrocom61-app/
 | **Database** | SQLite | Penyimpanan riwayat deteksi |
 | **Frontend** | HTML + CSS + JS | Antarmuka pengguna real-time |
 | **Hardware** | Raspberry Pi 4 (8GB RAM) | Perangkat edge computing |
-| **Kamera** | ArduCam / DroidCam | Sumber input video |
+| **Kamera** | ArduCam / DroidCam  / kamera luaran | Sumber input video |
 
 ---
 
