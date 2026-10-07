@@ -1,0 +1,11 @@
+# Web server
+flask
+
+# Computer Vision & AI
+ultralytics
+opencv-python
+numpy
+
+# ONNX Runtime — wajib untuk membaca model .onnx (ringan di CPU/Raspberry Pi)
+onnx
+onnxruntime

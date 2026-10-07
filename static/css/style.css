@@ -1,0 +1,552 @@
+/* ============================================================
+   RESET & VARIABEL
+============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #0a0e1a;
+  --surface: rgba(10,14,26,.82);
+  --glass:   rgba(255,255,255,.04);
+  --border:  rgba(0,212,255,.18);
+  --cyan:    #00d4ff;
+  --green:   #00ff88;
+  --orange:  #ff9500;
+  --red:     #ff3b3b;
+  --text:    #e8f4ff;
+  --dim:     rgba(232,244,255,.45);
+  --radius:  14px;
+  --sheet-min:   88px;   /* tinggi bottom sheet saat collapsed */
+  --sheet-mid:   260px;  /* tinggi bottom sheet saat setengah terbuka */
+}
+
+/* ============================================================
+   BASE
+============================================================ */
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* ============================================================
+   LAYER KAMERA — fullscreen background
+============================================================ */
+#cam-layer {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 0;
+}
+
+#video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+#canvas-cam {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* ---- Scanning line ---- */
+#scan-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--cyan) 20%,
+    rgba(0,212,255,.9) 50%,
+    var(--cyan) 80%,
+    transparent 100%
+  );
+  box-shadow: 0 0 12px 3px rgba(0,212,255,.55);
+  pointer-events: none;
+  display: none;
+  animation: scanDown 2.8s ease-in-out infinite;
+}
+
+@keyframes scanDown {
+  0%   { top: 0%; opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* ---- Corner brackets (seperti viewfinder) ---- */
+.corner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-color: var(--cyan);
+  border-style: solid;
+  opacity: 0.6;
+  pointer-events: none;
+}
+.corner.tl { top: 10px;    left: 10px;   border-width: 2px 0 0 2px; }
+.corner.tr { top: 10px;    right: 10px;  border-width: 2px 2px 0 0; }
+.corner.bl { bottom: 10px; left: 10px;   border-width: 0 0 2px 2px; }
+.corner.br { bottom: 10px; right: 10px;  border-width: 0 2px 2px 0; }
+
+/* ---- Placeholder kamera mati ---- */
+#cam-off {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--bg);
+}
+
+.cam-off-icon {
+  font-size: 4rem;
+  color: rgba(0,212,255,.25);
+  animation: hexPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes hexPulse {
+  0%, 100% { opacity: .25; transform: scale(1); }
+  50%       { opacity: .55; transform: scale(1.05); }
+}
+
+.cam-off-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--dim);
+  letter-spacing: 2px;
+}
+
+.cam-off-sub {
+  font-size: 0.78rem;
+  color: rgba(232,244,255,.3);
+  letter-spacing: 0.5px;
+}
+
+/* ============================================================
+   HUD ATAS
+============================================================ */
+#hud-top {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  background: linear-gradient(to bottom, rgba(10,14,26,.9) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.hud-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-logo {
+  font-size: 1.4rem;
+  filter: drop-shadow(0 0 6px var(--cyan));
+}
+
+.hud-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: 1px;
+}
+
+.hud-sub {
+  font-size: 0.65rem;
+  color: var(--dim);
+  letter-spacing: 0.5px;
+  margin-top: 1px;
+}
+
+/* Status indikator */
+.hud-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(10,14,26,.7);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 10px;
+  backdrop-filter: blur(6px);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dim);
+  flex-shrink: 0;
+}
+
+.status-dot.standby { background: rgba(232,244,255,.3); }
+.status-dot.active  {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.status-lbl {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--dim);
+}
+
+.status-lbl.active { color: var(--green); }
+
+/* ============================================================
+   HUD KIRI — stats vertikal
+============================================================ */
+#hud-left {
+  position: fixed;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  background: rgba(10,14,26,.72);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 8px;
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.v-stat { text-align: center; }
+
+.v-stat-val {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.v-stat-val.accent { color: var(--cyan); }
+
+.v-stat-lbl {
+  font-size: 0.58rem;
+  color: var(--dim);
+  letter-spacing: 1px;
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+
+.v-divider {
+  width: 20px;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ============================================================
+   BOTTOM SHEET
+============================================================ */
+#bottom-sheet {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: 0;
+  z-index: 30;
+  background: rgba(10,14,26,.92);
+  border-top: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding-bottom: env(safe-area-inset-bottom);
+
+  /* Tinggi awal = collapsed */
+  height: var(--sheet-min);
+  transition: height 0.35s cubic-bezier(.4,0,.2,1);
+  overflow: hidden;
+}
+
+#bottom-sheet.mid  { height: var(--sheet-mid); }
+#bottom-sheet.full { height: 70vh; }
+
+/* Drag handle */
+#sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: rgba(255,255,255,.2);
+  border-radius: 2px;
+  margin: 10px auto 0;
+  cursor: pointer;
+}
+
+/* ---- Baris kontrol ---- */
+#sheet-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 0;
+}
+
+.ctrl-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.1s, opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.ctrl-btn:active   { transform: scale(0.95); }
+.ctrl-btn:disabled { opacity: 0.4; }
+
+.ctrl-btn.start { background: var(--green);  color: #000; }
+.ctrl-btn.stop  { background: var(--red);    color: #fff; }
+
+/* Confidence wrapper */
+.conf-wrap { flex: 1; }
+
+.conf-top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.conf-lbl {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--dim);
+}
+
+.conf-val {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--cyan);
+}
+
+#conf-slider {
+  width: 100%;
+  accent-color: var(--cyan);
+  cursor: pointer;
+  height: 4px;
+}
+
+/* ---- Divider ---- */
+.sheet-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 16px 0;
+}
+
+/* ---- Header hasil ---- */
+#sheet-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px 0;
+}
+
+.result-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+
+.result-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--cyan);
+  background: rgba(0,212,255,.12);
+  border: 1px solid rgba(0,212,255,.25);
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+/* ---- Daftar hasil ---- */
+#sheet-result-body {
+  padding: 8px 16px 0;
+  overflow-y: auto;
+  max-height: calc(70vh - 160px);
+}
+
+.result-empty {
+  font-size: 0.8rem;
+  color: var(--dim);
+  text-align: center;
+  padding: 14px 0;
+}
+
+/* Item per kelas */
+.result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0,212,255,.08);
+}
+
+.result-item:last-child { border-bottom: none; }
+
+.ri-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ri-name {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ri-count {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--dim);
+  min-width: 18px;
+  text-align: center;
+}
+
+.ri-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 90px;
+}
+
+.ri-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ri-bar-fill { height: 100%; border-radius: 2px; }
+.rb-green  { background: var(--green); }
+.rb-cyan   { background: var(--cyan); }
+.rb-orange { background: var(--orange); }
+.rb-red    { background: var(--red); }
+
+.ri-pct {
+  font-size: 0.72rem;
+  color: var(--dim);
+  min-width: 32px;
+  text-align: right;
+}
+
+/* ============================================================
+   TOAST
+============================================================ */
+#toast {
+  position: fixed;
+  bottom: calc(var(--sheet-min) + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  background: rgba(10,14,26,.9);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 20px;
+  font-size: 0.83rem;
+  color: var(--text);
+  z-index: 50;
+  transition: transform 0.3s;
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+#toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ============================================================
+   DESKTOP — layout dua kolom (layar ≥ 900px)
+   Kamera besar kiri, panel kontrol tetap kanan
+============================================================ */
+@media (min-width: 900px) {
+  :root { --panel-w: 320px; }
+
+  html, body { overflow: hidden; }
+
+  #cam-layer {
+    right: var(--panel-w);
+  }
+
+  #hud-top {
+    right: var(--panel-w);
+  }
+
+  #hud-left { left: 14px; }
+
+  /* Bottom sheet → jadi panel samping kanan tetap */
+  #bottom-sheet {
+    left: auto;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--panel-w);
+    height: 100% !important;
+    border-radius: 0;
+    border-top: none;
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    transition: none;
+  }
+
+  #sheet-handle { display: none; }
+
+  #sheet-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 20px 20px 0;
+  }
+
+  .ctrl-btn { justify-content: center; padding: 12px; }
+
+  .conf-wrap { width: 100%; }
+
+  #sheet-result-body {
+    max-height: none;
+    flex: 1;
+  }
+
+  #toast { bottom: 20px; }
+}
+
+/* ============================================================
+   Tablet landscape sedang (760–899px) — mirip mobile tapi lebih lega
+============================================================ */
+@media (min-width: 760px) and (max-width: 899px) {
+  :root { --sheet-min: 100px; --sheet-mid: 300px; }
+}

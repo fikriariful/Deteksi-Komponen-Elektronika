@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ElectroCom61 — Display Inspeksi</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/display.css') }}"/>
+</head>
+<body>
+
+  <!-- ═══ HEADER ═══ -->
+  <header id="disp-header">
+    <div class="hd-brand">
+      <div>
+        <div class="hd-name">ElectroCom61</div>
+        <div class="hd-sub">Sistem Deteksi Komponen Elektronika</div>
+      </div>
+    </div>
+
+    <div class="hd-status">
+      <span class="hd-dot" id="hd-dot"></span>
+      <span class="hd-lbl" id="hd-lbl">SISTEM STANDBY</span>
+    </div>
+
+    <div class="hd-time" id="hd-time">—</div>
+  </header>
+
+  <!-- ═══ LAYOUT UTAMA ═══ -->
+  <div id="disp-layout">
+
+    <!-- ──── PANEL KIRI: VIDEO FEED ──── -->
+    <div id="video-panel">
+      <div class="panel-label">LIVE FEED — TREADMILL</div>
+
+      <div id="video-wrap">
+        <!-- MJPEG stream dari server -->
+        <img id="mjpeg" src="/video/stream" alt="Live feed"/>
+
+        <!-- Overlay: tidak ada sinyal -->
+        <div id="no-signal">
+          <div class="ns-icon">📡</div>
+          <div class="ns-title">SISTEM STANDBY</div>
+          <div class="ns-hint">Tekan "Mulai Deteksi" untuk membaca kamera</div>
+        </div>
+      </div>
+
+      <!-- Stats bawah video -->
+      <div id="video-stats">
+        <div class="vs-item">
+          <span class="vs-lbl">Inferensi</span>
+          <span class="vs-val" id="ds-ms">— ms</span>
+        </div>
+        <div class="vs-item">
+          <span class="vs-lbl">Objek Terdeteksi</span>
+          <span class="vs-val accent" id="ds-count">0</span>
+        </div>
+        <div class="vs-item">
+          <span class="vs-lbl">Update Terakhir</span>
+          <span class="vs-val" id="ds-last">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──── PANEL KANAN: HASIL DETEKSI ──── -->
+    <div id="result-panel">
+
+      <!-- Ringkasan total -->
+      <div id="summary-cards">
+        <div class="s-card">
+          <div class="s-val" id="sc-total">0</div>
+          <div class="s-lbl">Total Objek</div>
+        </div>
+        <div class="s-card">
+          <div class="s-val" id="sc-kelas">0</div>
+          <div class="s-lbl">Jenis Kelas</div>
+        </div>
+        <div class="s-card accent">
+          <div class="s-val" id="sc-ms">—</div>
+          <div class="s-lbl">Inf. (ms)</div>
+        </div>
+      </div>
+
+      <!-- KONTROL KAMERA SERVER -->
+      <div class="rp-label">KONTROL SISTEM</div>
+      <div id="server-controls" style="margin-bottom: 16px; background: var(--surface2); padding: 12px; border-radius: 10px; border: 1px solid var(--border);">
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;">
+           <div style="display: flex; flex-direction: column; gap: 6px;">
+             <span style="font-size: 0.65rem; color: var(--dim);">SUMBER KAMERA</span>
+             <select id="cam-select" style="padding: 8px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; outline: none; cursor: pointer;">
+               <option value="0">Kamera 0 (Bawaan Laptop)</option>
+               <option value="1">Kamera 1 (USB Eksternal)</option>
+               <option value="url" selected>IP Camera / DroidCam WiFi</option>
+             </select>
+             <input type="text" id="cam-input" value="http://192.168.1.4:4747/video" placeholder="Masukkan URL DroidCam" style="padding: 8px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; outline: none; font-family: monospace;">
+           </div>
+           <div style="display: flex; gap: 10px;">
+             <button id="btn-start" style="flex:1; padding: 10px; background: var(--primary); color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">▶ Mulai Deteksi</button>
+             <button id="btn-stop" style="flex:1; padding: 10px; background: var(--red); color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; display: none;">⏹ Hentikan</button>
+           </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--dim); margin-bottom: 4px;">
+           <span>SENSITIVITAS (CONFIDENCE)</span>
+           <span id="conf-val" style="color: var(--text-bright); font-weight: bold;">50%</span>
+        </div>
+        <input type="range" id="conf-slider" min="5" max="95" step="1" value="50" style="width: 100%; accent-color: var(--primary); cursor: pointer; height: 4px;">
+      </div>
+
+      <!-- Judul daftar -->
+      <div class="rp-label">KOMPONEN TERDETEKSI</div>
+
+      <!-- Daftar per kelas -->
+      <div id="class-list">
+        <div class="cls-empty" id="cls-empty">
+          Menunggu data dari kamera HP...
+        </div>
+      </div>
+
+      <!-- Log singkat 5 event terakhir -->
+      <div class="rp-label" style="margin-top:16px;">LOG DETEKSI (LIVE)</div>
+      <div id="event-log"></div>
+
+      <!-- Riwayat Database -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; margin-bottom: 8px;">
+        <div class="rp-label" style="margin-bottom: 0;">RIWAYAT PENYIMPANAN</div>
+        <a href="/api/history/export" id="btn-export" style="text-decoration: none; font-size: 0.65rem; padding: 4px 8px; background: var(--surface2); color: var(--text-bright); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">📥 Export CSV</a>
+      </div>
+      <div id="history-list" style="display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px;">
+        <div style="font-size: 0.75rem; color: var(--dim); text-align: center; padding: 10px;">Belum ada data</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="toast"></div>
+  <script src="{{ url_for('static', filename='js/display.js') }}"></script>
+</body>
+</html>

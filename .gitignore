@@ -1,0 +1,42 @@
+# File dan folder yang tidak perlu di-upload ke GitHub
+
+# Virtual Environment Python (ukurannya bisa gigabyte)
+venv/
+env/
+.env/
+
+# File model AI (ukurannya besar, simpan di Google Drive / Releases)
+models/*.onnx
+models/*.pt
+
+# Database lokal (tiap pengguna punya data sendiri)
+data/
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Folder hasil training YOLO (ukurannya besar)
+electrocom61_yolov8n_runs/
+electrocom61_yolov8s_runs/
+runs/
+
+# File sistem
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# File editor
+.vscode/
+.idea/
+*.swp
+
+# File log
+*.log
+
+# File environment variable
+.env
+.env.local
