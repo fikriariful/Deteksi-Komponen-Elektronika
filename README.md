@@ -26,7 +26,7 @@ Proyek ini merupakan bagian dari penelitian Tugas Akhir di **Universitas Riau**,
 - ✅ Riwayat deteksi tersimpan di database SQLite
 - ✅ Export data ke file **CSV / Excel**
 - ✅ Streaming video langsung di browser (MJPEG)
-- ✅ Mendukung kamera USB, Webcam laptop, dan **IP Camera (DroidCam)**
+- ✅ Mendukung **Raspberry Pi Camera Module Rev 1.3 (CSI)**, USB Webcam, dan **IP Camera (DroidCam)**
 - ✅ Dioptimalkan untuk **Raspberry Pi 4** dengan ONNX Runtime
 
 ---
@@ -70,7 +70,7 @@ electrocom61-app/
 | **Database** | SQLite | Penyimpanan riwayat deteksi |
 | **Frontend** | HTML + CSS + JS | Antarmuka pengguna real-time |
 | **Hardware** | Raspberry Pi 4 (8GB RAM) | Perangkat edge computing |
-| **Kamera** | ArduCam / DroidCam  / kamera luaran | Sumber input video |
+| **Modul Kamera** | Raspberry Pi Camera Rev 1.3 (CSI) / USB / IP Cam | Sumber input video utama |
 
 ---
 
@@ -101,13 +101,13 @@ Model dilatih menggunakan dataset **ElectroCom61** dari Kaggle (2.121 gambar, 61
 ### Persyaratan Sistem
 - Python 3.10+
 - Git
-- Kamera (USB / Webcam / IP Camera)
+- Kamera (Raspberry Pi Camera Rev 1.3 / USB Webcam / IP Camera)
 
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/USERNAME/electrocom61-app.git
-cd electrocom61-app
+git clone https://github.com/fikriariful/Deteksi-Komponen-Elektronika.git
+cd Deteksi-Komponen-Elektronika
 ```
 
 ### 2. Buat Virtual Environment
@@ -117,7 +117,9 @@ cd electrocom61-app
 python -m venv venv
 .\venv\Scripts\activate
 
-# Linux / Raspberry Pi
+# Linux / Raspberry Pi OS
+sudo apt update
+sudo apt install -y python3-venv python3-pip
 python3 -m venv venv
 source venv/bin/activate
 ```
@@ -128,10 +130,10 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-> ⚠️ **Khusus Raspberry Pi (Linux):** Install library sistem dulu sebelum `pip install`:
+> ⚠️ **Khusus Raspberry Pi (Linux):** Pastikan library pendukung OpenCV sudah terinstall:
 > ```bash
 > sudo apt update
-> sudo apt install -y libgl1 libglib2.0-0 libsm6 libxext6
+> sudo apt install -y libgl1 libglib2.0-0 libsm6 libxext6 v4l-utils
 > ```
 
 ### 4. Jalankan Aplikasi
@@ -142,54 +144,90 @@ python app.py
 
 Buka browser dan akses: **`http://localhost:5000`**
 
-Jika dibuka dari perangkat lain (misal: buka Raspberry Pi dari laptop):
+Jika dibuka dari laptop (Raspberry Pi terhubung WiFi yang sama):
 **`http://<IP-RASPBERRY-PI>:5000`**
 
 ---
 
-## 🍓 Panduan Khusus Raspberry Pi 4
+## 🍓 Panduan Khusus Raspberry Pi 4 & Kamera Rev 1.3
 
-### Koneksi Remote via SSH
+### 1. Pengaturan Kamera Raspberry Pi Rev 1.3 (CSI Ribbon Cable)
+Kamera Raspberry Pi Rev 1.3 terhubung melalui port CSI kabel pita. Agar terdeteksi oleh OpenCV sebagai `/dev/video0`:
 
+1. Buka konfigurasi Raspberry Pi:
+   ```bash
+   sudo raspi-config
+   ```
+2. Masuk ke **Interface Options** -> **Legacy Camera** -> Pilih **Enable**.
+3. Reboot Raspberry Pi:
+   ```bash
+   sudo reboot
+   ```
+4. Cek apakah kamera sudah terbaca oleh sistem:
+   ```bash
+   ls /dev/video*
+   ```
+   *(Jika muncul `/dev/video0`, berarti kamera Rev 1.3 sudah siap digunakan).*
+
+---
+
+### 2. Persiapan dan Instalasi di Raspberry Pi OS (Penting untuk SD Card 16GB)
+
+Karena memori Raspberry Pi (MicroSD 16GB) sangat terbatas, ikuti langkah ini dengan hati-hati agar tidak terjadi error `No space left on device` atau lag yang parah.
+
+#### A. Persiapan Folder di PC/Laptop (Sebelum dipindah ke Pi)
+Jika Anda memindahkan folder secara manual (via Flashdisk), pastikan Anda **MENGHAPUS** folder/file berikut agar memori Pi tidak penuh:
+- ❌ Hapus folder `venv` (Milik Windows, tidak bisa dipakai di Pi dan memakan ~1GB)
+- ❌ Hapus folder `.git` (Jika tidak butuh riwayat git)
+- ❌ Hapus file `.ipynb` (File training, tidak dipakai untuk menjalankan aplikasi)
+
+#### B. Optimasi OS Raspberry Pi
+Sangat disarankan untuk **TIDAK** menjalankan aplikasi ini melalui Visual Studio Code (VSCode) di Raspberry Pi karena sangat memakan RAM. Hapus VSCode dan gunakan terminal bawaan (LXTerminal):
 ```bash
-# Cari IP Raspberry Pi
-hostname -I
-
-# Koneksi dari laptop Windows (PowerShell)
-ssh pi@192.168.x.x
+sudo apt remove --purge code -y
+sudo apt autoremove -y
+rm -rf ~/.vscode ~/.config/Code ~/.vscode-shared
 ```
 
-### Install di Raspberry Pi
+#### C. Proses Instalasi (Di Terminal Raspberry Pi)
+Buka terminal bawaan (`Ctrl + Alt + T`), masuk ke folder aplikasi Anda, lalu jalankan perintah berikut:
 
 ```bash
-# Install library sistem
+# 1. Update & Install dependency sistem untuk OpenCV
 sudo apt update
-sudo apt install -y libgl1 libglib2.0-0 libsm6 libxext6
+sudo apt install -y python3-venv python3-pip libgl1 libglib2.0-0 libsm6 libxext6 v4l-utils
 
-# Clone dan install aplikasi
-git clone https://github.com/USERNAME/electrocom61-app.git
-cd electrocom61-app
+# 2. Buat dan aktifkan virtual environment (Wajib!)
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
 
-# Jalankan
-python3 app.py
+# 3. Bersihkan cache agar ruang penyimpanan lega
+pip cache purge
+sudo apt clean
+
+# 4. INSTALL PYTORCH CPU-ONLY (SANGAT PENTING!)
+# Langkah ini mencegah download file CUDA/NVIDIA raksasa yang akan membuat memori Pi penuh seketika.
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# 5. Install sisa library
+pip install -r requirements.txt
 ```
 
-### Optimasi Performa di Raspberry Pi
+---
 
-Aplikasi sudah dikonfigurasi untuk berjalan ringan di Raspberry Pi 4:
+### 3. Optimasi Performa di Raspberry Pi
+
+Aplikasi sudah dikonfigurasi agar berjalan ringan di Raspberry Pi 4 tanpa lag:
 
 ```bash
 # Konfigurasi default yang sudah dioptimalkan:
-# - IMGSZ=320    (resolusi inferensi lebih kecil → 4x lebih cepat)
-# - FRAME_SKIP=3 (inferensi hanya tiap 3 frame → hemat CPU)
-# - JPEG_QUALITY=65 (kualitas streaming lebih ringan)
+# - IMGSZ=320        (resolusi inferensi lebih kecil → 4x lebih cepat)
+# - FRAME_SKIP=3     (inferensi hanya tiap 3 frame → hemat CPU)
+# - JPEG_QUALITY=65  (kualitas streaming lebih ringan)
 
 python3 app.py
 
-# Atau custom manual:
+# Atau jalankan dengan custom environment variable:
 IMGSZ=320 FRAME_SKIP=3 python3 app.py
 ```
 
@@ -198,7 +236,7 @@ IMGSZ=320 FRAME_SKIP=3 python3 app.py
 ## 📱 Cara Penggunaan Aplikasi
 
 1. **Buka browser** dan akses `http://localhost:5000`
-2. **Pilih Sumber Kamera** dari dropdown (Webcam / USB / IP Camera)
+2. **Pilih Sumber Kamera** dari dropdown (Default `0` untuk RPi Camera Rev 1.3 / Webcam)
 3. Klik **"Mulai Deteksi"** — kamera akan aktif dan riwayat baru dimulai
 4. **Arahkan komponen elektronika** ke dalam **Kotak Zona Inspeksi** (kotak kuning di layar)
 5. Komponen yang melintas dalam zona akan **otomatis dicatat** ke riwayat saat keluar zona
@@ -229,17 +267,11 @@ Model dapat mendeteksi **61 jenis komponen elektronika**, diantaranya:
 ## 📚 Referensi
 
 1. **Redmon, J., & Farhadi, A.** (2018). *YOLOv3: An Incremental Improvement*. arXiv:1804.02767.
-
 2. **Jocher, G., et al.** (2023). *Ultralytics YOLOv8*. GitHub. https://github.com/ultralytics/ultralytics
-
 3. **ONNX Community** (2023). *ONNX Runtime: Cross-platform, High Performance ML Inferencing*. https://onnxruntime.ai/
-
 4. **ElectroCom61 Dataset** — Kaggle. *ElectroCom61: A Multiclass Dataset for Detection of Electronic Components*. https://www.kaggle.com/datasets/
-
-5. **Raspberry Pi Foundation** (2023). *Raspberry Pi 4 Model B Datasheet*. https://www.raspberrypi.com/products/raspberry-pi-4-model-b/
-
+5. **Raspberry Pi Foundation** (2023). *Raspberry Pi 4 Model B Datasheet & Camera Module Setup*. https://www.raspberrypi.com/documentation/
 6. **Bradski, G.** (2000). *The OpenCV Library*. Dr. Dobb's Journal of Software Tools.
-
 7. **Pallets Projects** (2023). *Flask — A lightweight WSGI web application framework*. https://flask.palletsprojects.com/
 
 ---
@@ -248,8 +280,8 @@ Model dapat mendeteksi **61 jenis komponen elektronika**, diantaranya:
 
 | | |
 |---|---|
-| **Nama** | *(Ariful Fikri)* |
-| **NIM** | *(2307110474)* |
+| **Nama** | Ariful Fikri |
+| **NIM** | 2307110474 |
 | **Program Studi** | Teknik Informatika |
 | **Universitas** | Universitas Riau |
 | **Tahun** | 2026 |
