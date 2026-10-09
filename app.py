@@ -2,24 +2,38 @@ import json
 import os
 import queue
 import sqlite3
+import sys
 import threading
 import time
 from datetime import datetime
 from pathlib import Path
 
+# Sembunyikan log ioctl V4L2 OpenCV yang mengganggu di Raspberry Pi
+os.environ["OPENCV_LOG_LEVEL"] = "FATAL"
+os.environ["OPENCV_VIDEOIO_V4L2_DEBUG"] = "0"
+
 import cv2
 import numpy as np
 from flask import Flask, Response, jsonify, render_template, request, send_file
 
+try:
+    cv2.setLogLevel(0)
+except Exception:
+    pass
+
 from ultralytics import YOLO
 
-# Picamera2 hanya ada di Raspberry Pi. Di laptop import ini gagal, dan itu tidak masalah
-# karena kamera otomatis dibaca lewat OpenCV seperti biasa.
+# Picamera2 hanya ada di Raspberry Pi. Di venv, tambahkan path paket sistem (/usr/lib/python3/dist-packages)
 try:
     from picamera2 import Picamera2
     PICAMERA2_ADA = True
 except ImportError:
-    PICAMERA2_ADA = False
+    sys.path.append("/usr/lib/python3/dist-packages")
+    try:
+        from picamera2 import Picamera2
+        PICAMERA2_ADA = True
+    except ImportError:
+        PICAMERA2_ADA = False
 
 # ── Konfigurasi ───────────────────────────────────────────────────────────────
 MODEL_PATH   = os.getenv("MODEL_PATH", "models/best.onnx")
@@ -200,12 +214,13 @@ def process_tracking(detections: list) -> list:
     return newly_saved
 
 # ── Zero-Latency Camera Stream ─────────────────────────────────────────────────
+import glob
+
 def pakai_picamera2(src) -> bool:
     """True kalau sumber ini harus dibaca lewat Picamera2 (Pi Camera di Raspberry Pi)."""
-    # Hanya "Kamera 0" yang diarahkan ke Pi Camera. URL (DroidCam) dan indeks lain tetap OpenCV.
     if CAM_BACKEND == "opencv" or not PICAMERA2_ADA:
         return False
-    if isinstance(src, str) or src != 0:
+    if isinstance(src, str) and not src.isdigit():
         return False
     if CAM_BACKEND == "picamera2":
         return True
@@ -224,7 +239,7 @@ class CameraStream:
 
         if pakai_picamera2(src):
             try:
-                self.picam = Picamera2(src)
+                self.picam = Picamera2(0)
                 config = self.picam.create_preview_configuration(
                     main={"size": (CAM_WIDTH, CAM_HEIGHT), "format": "RGB888"}
                 )
@@ -243,10 +258,23 @@ class CameraStream:
             cam_sources = []
             if isinstance(src, int) or (isinstance(src, str) and src.isdigit()):
                 idx = int(src)
-                # Di Linux/Raspberry Pi, coba V4L2 backend dulu, lalu ANY, lalu indeks 0 & 1
-                cam_sources = [(idx, cv2.CAP_V4L2), (idx, cv2.CAP_ANY)]
-                if idx == 0:
-                    cam_sources.extend([(1, cv2.CAP_V4L2), (1, cv2.CAP_ANY)])
+                candidates = [idx]
+                # Di Raspberry Pi, /dev/video0 & /dev/video1 sering kali adalah codec hardware.
+                # Cari semua node /dev/video* dan tes satu per satu sampai ketemu kamera asli.
+                for dev_path in sorted(glob.glob("/dev/video*")):
+                    try:
+                        num = int(dev_path.replace("/dev/video", ""))
+                        if num not in candidates:
+                            candidates.append(num)
+                    except ValueError:
+                        pass
+                for i in range(6):
+                    if i not in candidates:
+                        candidates.append(i)
+
+                for c in candidates:
+                    cam_sources.append((c, cv2.CAP_V4L2))
+                    cam_sources.append((c, cv2.CAP_ANY))
             else:
                 cam_sources = [(src, cv2.CAP_ANY)]
 
@@ -261,7 +289,7 @@ class CameraStream:
                         # Warmup retry (hingga 15 percobaan / 1.5 detik) agar sensor V4L2/Raspberry Pi siap
                         for _ in range(15):
                             ret, frame = cap.read()
-                            if ret and frame is not None:
+                            if ret and frame is not None and frame.size > 0:
                                 self.stream = cap
                                 self.ret = True
                                 self.frame = frame
@@ -274,7 +302,7 @@ class CameraStream:
                         else:
                             cap.release()
                 except Exception as ex:
-                    print(f"Gagal mencoba sumber kamera {s}: {ex}")
+                    pass
 
             if not self.ret:
                 print(f"Peringatan: Tidak dapat membaca frame dari sumber kamera {src}")
