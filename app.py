@@ -419,6 +419,8 @@ def camera_loop():
                 with state_lock:
                     latest_frame = frame_bytes
 
+        time.sleep(0.01)  # Berikan jeda 10ms agar CPU Raspberry Pi tidak 100% kepanasan
+
     cap.stop()
     with state_lock:
         latest_frame  = None
