@@ -27,13 +27,15 @@ const confVal   = document.getElementById("conf-val");
 const camSelect = document.getElementById("cam-select");
 const camInput  = document.getElementById("cam-input");
 
-camSelect.addEventListener("change", () => {
+function updateCamInputVisibility() {
   if (camSelect.value === "url") {
     camInput.style.display = "block";
   } else {
     camInput.style.display = "none";
   }
-});
+}
+camSelect.addEventListener("change", updateCamInputVisibility);
+updateCamInputVisibility();
 
 /* ─── API CONTROL ─────────────────────────────────────── */
 btnStart.addEventListener("click", async () => {

@@ -13,6 +13,14 @@ from flask import Flask, Response, jsonify, render_template, request, send_file
 
 from ultralytics import YOLO
 
+# Picamera2 hanya ada di Raspberry Pi. Di laptop import ini gagal, dan itu tidak masalah
+# karena kamera otomatis dibaca lewat OpenCV seperti biasa.
+try:
+    from picamera2 import Picamera2
+    PICAMERA2_ADA = True
+except ImportError:
+    PICAMERA2_ADA = False
+
 # ── Konfigurasi ───────────────────────────────────────────────────────────────
 MODEL_PATH   = os.getenv("MODEL_PATH", "models/best.onnx")
 IMGSZ        = int(os.getenv("IMGSZ", "320"))      # 320 lebih ringan di Raspberry Pi
@@ -25,6 +33,11 @@ CAM_WIDTH    = int(os.getenv("CAM_WIDTH",  "640"))
 CAM_HEIGHT   = int(os.getenv("CAM_HEIGHT", "480"))
 # Kualitas JPEG streaming
 JPEG_QUALITY = int(os.getenv("JPEG_QUALITY", "65"))
+# Backend kamera untuk "Kamera 0":
+#   auto      -> pakai Picamera2 kalau ada Pi Camera terdeteksi, kalau tidak pakai OpenCV
+#   opencv    -> paksa OpenCV (misalnya untuk webcam USB di Raspberry Pi)
+#   picamera2 -> paksa Picamera2
+CAM_BACKEND  = os.getenv("CAM_BACKEND", "auto")
 
 # Waktu (detik) sebelum barang yang keluar dari "Zona" dianggap benar-benar lewat dan disimpan
 EXIT_DELAY = 1.0
@@ -187,43 +200,141 @@ def process_tracking(detections: list) -> list:
     return newly_saved
 
 # ── Zero-Latency Camera Stream ─────────────────────────────────────────────────
+def pakai_picamera2(src) -> bool:
+    """True kalau sumber ini harus dibaca lewat Picamera2 (Pi Camera di Raspberry Pi)."""
+    # Hanya "Kamera 0" yang diarahkan ke Pi Camera. URL (DroidCam) dan indeks lain tetap OpenCV.
+    if CAM_BACKEND == "opencv" or not PICAMERA2_ADA:
+        return False
+    if isinstance(src, str) or src != 0:
+        return False
+    if CAM_BACKEND == "picamera2":
+        return True
+    try:
+        return len(Picamera2.global_camera_info()) > 0
+    except Exception:
+        return False
+
 class CameraStream:
     def __init__(self, src):
-        self.stream = cv2.VideoCapture(src)
-        self.stream.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        # Set resolusi kamera — resolusi lebih kecil = CPU lebih hemat
-        self.stream.set(cv2.CAP_PROP_FRAME_WIDTH,  CAM_WIDTH)
-        self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, CAM_HEIGHT)
-        self.ret, self.frame = self.stream.read()
         self.stopped = False
-        threading.Thread(target=self.update, daemon=True).start()
+        self.picam   = None
+        self.stream  = None
+        self.ret     = False
+        self.frame   = None
+
+        if pakai_picamera2(src):
+            try:
+                self.picam = Picamera2(src)
+                config = self.picam.create_preview_configuration(
+                    main={"size": (CAM_WIDTH, CAM_HEIGHT), "format": "RGB888"}
+                )
+                self.picam.configure(config)
+                self.picam.start()
+                time.sleep(0.2)
+                self.frame = self.picam.capture_array()
+                self.ret   = self.frame is not None
+                print(f"Kamera: Pi Camera (Picamera2) {CAM_WIDTH}x{CAM_HEIGHT}")
+            except Exception as e:
+                print(f"Gagal inisialisasi Picamera2: {e}, mencoba OpenCV...")
+                self.picam = None
+
+        if self.picam is None:
+            # OpenCV fallback (Webcam / USB / IP Cam / RPi V4L2)
+            cam_sources = []
+            if isinstance(src, int) or (isinstance(src, str) and src.isdigit()):
+                idx = int(src)
+                # Di Linux/Raspberry Pi, coba V4L2 backend dulu, lalu ANY, lalu indeks 0 & 1
+                cam_sources = [(idx, cv2.CAP_V4L2), (idx, cv2.CAP_ANY)]
+                if idx == 0:
+                    cam_sources.extend([(1, cv2.CAP_V4L2), (1, cv2.CAP_ANY)])
+            else:
+                cam_sources = [(src, cv2.CAP_ANY)]
+
+            for s, backend in cam_sources:
+                try:
+                    cap = cv2.VideoCapture(s, backend) if backend != cv2.CAP_ANY else cv2.VideoCapture(s)
+                    if cap.isOpened():
+                        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAM_WIDTH)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAM_HEIGHT)
+                        
+                        # Warmup retry (hingga 15 percobaan / 1.5 detik) agar sensor V4L2/Raspberry Pi siap
+                        for _ in range(15):
+                            ret, frame = cap.read()
+                            if ret and frame is not None:
+                                self.stream = cap
+                                self.ret = True
+                                self.frame = frame
+                                print(f"Kamera: OpenCV berhasil membaca {s} (backend={backend})")
+                                break
+                            time.sleep(0.1)
+                            
+                        if self.ret:
+                            break
+                        else:
+                            cap.release()
+                except Exception as ex:
+                    print(f"Gagal mencoba sumber kamera {s}: {ex}")
+
+            if not self.ret:
+                print(f"Peringatan: Tidak dapat membaca frame dari sumber kamera {src}")
+
+        self.thread = threading.Thread(target=self.update, daemon=True)
+        self.thread.start()
+
+    def is_opened(self) -> bool:
+        if self.picam is not None:
+            return bool(self.ret)
+        return self.stream is not None and self.stream.isOpened()
 
     def update(self):
         while not self.stopped:
-            if not self.stream.isOpened():
-                break
-            ret, frame = self.stream.read()
-            if ret:
-                self.ret, self.frame = ret, frame
+            if self.picam is not None:
+                try:
+                    frame = self.picam.capture_array()
+                except Exception:
+                    time.sleep(0.01)
+                    continue
+                self.ret, self.frame = True, frame
             else:
-                time.sleep(0.01)
+                if self.stream is None or not self.stream.isOpened():
+                    break
+                ret, frame = self.stream.read()
+                if ret:
+                    self.ret, self.frame = ret, frame
+                else:
+                    time.sleep(0.01)
 
     def read(self):
         return self.ret, self.frame
 
     def stop(self):
         self.stopped = True
-        self.stream.release()
+        self.thread.join(timeout=1.0)
+        if self.picam is not None:
+            try:
+                self.picam.stop()
+                self.picam.close()
+            except Exception:
+                pass
+        elif self.stream is not None:
+            self.stream.release()
 
 # ── Thread Kamera & YOLO ──────────────────────────────────────────────────────
 def camera_loop():
     global latest_frame, latest_result, is_running
 
-    cap = CameraStream(camera_index)
+    try:
+        cap = CameraStream(camera_index)
+    except Exception as e:
+        print(f"Gagal membuka kamera: {camera_index} ({e})")
+        is_running = False
+        return
     time.sleep(0.5)
 
-    if not cap.stream.isOpened():
+    if not cap.is_opened():
         print(f"Gagal membuka kamera: {camera_index}")
+        cap.stop()
         is_running = False
         return
 

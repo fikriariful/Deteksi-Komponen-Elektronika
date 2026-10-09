@@ -87,11 +87,11 @@
            <div style="display: flex; flex-direction: column; gap: 6px;">
              <span style="font-size: 0.65rem; color: var(--dim);">SUMBER KAMERA</span>
              <select id="cam-select" style="padding: 8px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; outline: none; cursor: pointer;">
-               <option value="0">Kamera 0 (Bawaan Laptop)</option>
-               <option value="1">Kamera 1 (USB Eksternal)</option>
-               <option value="url" selected>IP Camera / DroidCam WiFi</option>
+               <option value="0" selected>Kamera Raspberry Pi / USB (Kamera 0)</option>
+               <option value="1">Kamera USB Eksternal (Kamera 1)</option>
+               <option value="url">IP Camera / DroidCam WiFi</option>
              </select>
-             <input type="text" id="cam-input" value="http://192.168.1.4:4747/video" placeholder="Masukkan URL DroidCam" style="padding: 8px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; outline: none; font-family: monospace;">
+             <input type="text" id="cam-input" value="http://192.168.1.4:4747/video" placeholder="Masukkan URL DroidCam" style="padding: 8px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; outline: none; font-family: monospace; display: none;">
            </div>
            <div style="display: flex; gap: 10px;">
              <button id="btn-start" style="flex:1; padding: 10px; background: var(--primary); color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">▶ Mulai Deteksi</button>
