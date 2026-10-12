@@ -114,7 +114,7 @@ html, body {
 #mjpeg {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: contain; /* Utuh proporsional tanpa zoom/crop */
   display: block;
 }
 
