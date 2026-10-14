@@ -294,38 +294,37 @@ def create_presentation():
              ], badge="ANTI-DUPLIKASI 1.0 DETIK")
 
     # ═════════════════════════════════════════════════════════════════════════
-    # SLIDE 5: FITUR 2 - MULTI-KAMERA
+    # SLIDE 5: FITUR 2 - DEDICATED PI CAMERA
     # ═════════════════════════════════════════════════════════════════════════
     s5 = prs.slides.add_slide(blank_layout)
     set_slide_background(s5)
-    add_header(s5, "Fitur Aplikasi 2: Abstraksi Perangkat Keras", "Pipeline Fleksibilitas Multi-Kamera & Zero-Latency", 
-               "Arsitektur penanganan beragam hardware kamera secara mandiri dan bebas buffer delay")
+    add_header(s5, "Fitur Aplikasi 2: Abstraksi Sensor Hardware", "Integrasi Dedicated Raspberry Pi Camera & Zero-Latency", 
+               "Arsitektur penanganan hardware sensor Pi Camera Rev 1.3 native dan bebas buffer delay")
 
     add_card(s5, Inches(0.8), Inches(1.8), Inches(3.6), Inches(5.0),
-             "1. Fleksibilitas 3 Input Kamera", [
-                 "Pilihan 1: Raspberry Pi Camera Rev 1.3 (CSI Ribbon Cable) langsung via library resmi Picamera2.",
-                 "Pilihan 2: Webcam USB Eksternal (Kamera 1) melalui driver OpenCV V4L2.",
-                 "Pilihan 3: IP Camera / DroidCam WiFi melalui protokol stream HTTP/RTSP nirkabel dari smartphone.",
-                 "Seleksi Dinamis: Sumber kamera dapat diganti sewaktu-waktu melalui menu dropdown antarmuka web dashboard.",
-                 "Kompatibilitas Lintas OS: Berjalan mulus di Linux (Raspberry Pi OS) maupun Windows (Laptop)."
-             ], badge="UNIVERSAL CAMERA SUPPORT")
+             "1. Dedicated Pi Camera (CSI)", [
+                 "Hardware Target: Raspberry Pi Camera Module Rev 1.3.",
+                 "Koneksi: Jalur bus Camera Serial Interface (CSI) 15-pin kabel pita langsung ke SoC BCM2711.",
+                 "Driver Native: Menggunakan library resmi Picamera2 dan libcamera sub-system.",
+                 "Keunggulan CSI: Mengeliminasi beban transfer data USB host controller, mengurangi latency pengambilan gambar.",
+                 "Fallback Otomatis: Jika dijalankan di PC/laptop pengujian, otomatis fallback ke webcam 0 tanpa error."
+             ], badge="NATIVE CSI BUS PIPELINE")
 
     add_card(s5, Inches(4.8), Inches(1.8), Inches(3.6), Inches(5.0),
-             "2. Warmup Retry & V4L2 Scanner", [
-                 "Masalah Linux V4L2: Di Raspberry Pi, node /dev/video0 & /dev/video1 sering kali adalah hardware codec, bukan capture sensor fisik.",
-                 "Pemindaian Otomatis: Skrip CameraStream memindai seluruh node /dev/video* yang tersedia untuk menemukan kamera fisik aktif.",
-                 "Warmup Retry Polling: Melakukan percobaan pembacaan hingga 15 kali (1.5 detik) saat inisialisasi sensor.",
-                 "Pencegahan Crash: Menghilangkan error ioctl dan memastikan sensor kamera terkalibrasi sebelum video disiarkan.",
-                 "Suppression Log: Menyembunyikan log fatal V4L2 agar terminal tetap bersih."
+             "2. Warmup Retry Sensor", [
+                 "Karakteristik Sensor: Sensor CMOS kamera memerlukan waktu stabilisasi eksposur dan gain pada beberapa frame pertama.",
+                 "Warmup Retry Polling: Sistem melakukan percobaan capture hingga 15 kali (1.5 detik) saat inisialisasi awal sensor.",
+                 "Pencegahan Frame Korup: Memastikan frame yang masuk ke model AI selalu valid dan tidak kosong (None).",
+                 "Suppression Log: Menyembunyikan pesan debug internal V4L2 agar terminal pengujian tetap bersih dan terfokus."
              ], badge="ROBUST HARDWARE INIT")
 
     add_card(s5, Inches(8.8), Inches(1.8), Inches(3.7), Inches(5.0),
-             "3. Threaded Zero-Latency Capture", [
-                 "Masalah cv2.VideoCapture Default: Pemanggilan cap.read() secara synchronous menyebabkan antrean frame usang (lag buffer bertumpuk).",
-                 "Solusi Dedicated Thread: Class CameraStream menjalankan daemon thread terpisah yang terus menerus membaca sensor hardware.",
+             "3. Threaded Bufferless Capture", [
+                 "Masalah Buffer Kamera Standar: Pembacaan synchronous default menyebabkan penumpukan frame lama (antrean delay bertambah jika FPS turun).",
+                 "Solusi Dedicated Thread: Class CameraStream menjalankan daemon thread terpisah yang terus menerus menyegarkan frame terbaru.",
                  "Bufferless Snapshot: Thread utama inferensi AI selalu mengambil frame terbaru instan tanpa menunggu hardware kamera.",
-                 "Sinkronisasi Mutex: Memastikan tidak terjadi perebutan resource memory (race condition) antara thread kamera dan web server."
-             ], badge="REAL-TIME RESPONSIVENESS")
+                 "Sinkronisasi Mutex: Memastikan tidak terjadi perebutan resource memory (race condition) antar thread."
+             ], badge="REAL-TIME ZERO LATENCY")
 
     # ═════════════════════════════════════════════════════════════════════════
     # SLIDE 6: FITUR 3 - WEB DASHBOARD & EKSPOR
@@ -347,8 +346,8 @@ def create_presentation():
              "2. Manajemen Sesi Pengujian", [
                  "Tombol 'Mulai Deteksi': Mengaktifkan kamera, memicu thread inferensi YOLO, dan otomatis mengosongkan tabel riwayat sesi sebelumnya.",
                  "Data Bersih Setiap Pengujian: Mencegah data komponen dari batch pengujian lama bercampur dengan pengujian baru.",
-                 "Slider Sensitivitas Real-Time: Nilai confidence threshold (default 50%) dapat disesuaikan langsung (5%–95%) melalui slider.",
-                 "Adaptif Pencahayaan: Mempermudah penyesuaian jika kondisi cahaya lampu laboratorium berubah tanpa restart aplikasi."
+                 "Slider Ambang Batas Default 60%: Nilai confidence threshold dipasang optimal di 60% untuk mencegah deteksi palsu (false positive).",
+                 "Adaptif Pencahayaan: Penguji tetap dapat menyesuaikan nilai (10%–95%) jika intensitas cahaya lampu konveyor berubah."
              ], badge="DYNAMIC SESSION CONTROL")
 
     add_card(s6, Inches(8.8), Inches(1.8), Inches(3.7), Inches(5.0),

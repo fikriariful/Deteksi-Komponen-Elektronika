@@ -98,29 +98,26 @@
       <div class="rp-label">KONTROL SISTEM</div>
       <div id="server-controls" style="margin-bottom: 16px; background: var(--surface2); padding: 12px; border-radius: 10px; border: 1px solid var(--border);">
         <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;">
-           <div style="display: flex; flex-direction: column; gap: 6px;">
-             <span style="font-size: 0.65rem; color: var(--dim);">SUMBER KAMERA</span>
-             <!-- Dropdown pemilihan kamera (Kamera 0, Kamera 1, atau IP Camera) -->
-             <select id="cam-select" style="padding: 8px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; outline: none; cursor: pointer;">
-               <option value="0" selected>Kamera Bawaan / Utama (Index 0)</option>
-               <option value="1">Webcam Eksternal USB (Index 1)</option>
-               <option value="url">Kamera HP / DroidCam WiFi (URL)</option>
-             </select>
-             <!-- Input URL untuk DroidCam / IP Camera (muncul jika opsi URL dipilih) -->
-             <input type="text" id="cam-input" value="http://192.168.1.4:4747/video" placeholder="Masukkan URL DroidCam" style="padding: 8px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; outline: none; font-family: monospace; display: none;">
-           </div>
-           <div style="display: flex; gap: 10px;">
-             <!-- Tombol Mulai & Hentikan -->
-             <button id="btn-start" style="flex:1; padding: 10px; background: var(--primary); color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">▶ Mulai Deteksi</button>
-             <button id="btn-stop" style="flex:1; padding: 10px; background: var(--red); color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; display: none;">⏹ Hentikan</button>
-           </div>
+            <!-- Info Perangkat Kamera Default / USB -->
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;">
+              <span style="font-size: 0.65rem; color: var(--dim); letter-spacing: 0.5px;">SUMBER INPUT</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-bright); font-weight: 600; background: var(--surface2); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--border);">
+                <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green);"></span>
+                Default / USB (Camera 0)
+              </span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <!-- Tombol Mulai & Hentikan -->
+              <button id="btn-start" style="flex:1; padding: 10px; background: var(--primary); color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">▶ Mulai Deteksi</button>
+              <button id="btn-stop" style="flex:1; padding: 10px; background: var(--red); color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; display: none;">⏹ Hentikan</button>
+            </div>
         </div>
-        <!-- Slider Ambang Batas Confidence (Sensitivitas) -->
+        <!-- Slider Ambang Batas Confidence (Sensitivitas Default 60%) -->
         <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--dim); margin-bottom: 4px;">
-           <span>SENSITIVITAS (CONFIDENCE)</span>
-           <span id="conf-val" style="color: var(--text-bright); font-weight: bold;">50%</span>
+           <span>AMBANG BATAS CONFIDENCE</span>
+           <span id="conf-val" style="color: var(--text-bright); font-weight: bold;">60%</span>
         </div>
-        <input type="range" id="conf-slider" min="5" max="95" step="1" value="50" style="width: 100%; accent-color: var(--primary); cursor: pointer; height: 4px;">
+        <input type="range" id="conf-slider" min="10" max="95" step="1" value="60" style="width: 100%; accent-color: var(--primary); cursor: pointer; height: 4px;">
       </div>
 
       <!-- Daftar Komponen Terdeteksi Saat Ini (Real-Time) -->

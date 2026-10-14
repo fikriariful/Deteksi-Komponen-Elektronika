@@ -37,25 +37,7 @@ const eventLog   = document.getElementById("event-log");    // Kontainer log tek
 const btnStart   = document.getElementById("btn-start");    // Tombol "Mulai Deteksi"
 const btnStop    = document.getElementById("btn-stop");     // Tombol "Hentikan"
 const confSlider = document.getElementById("conf-slider");  // Slider pengatur ambang batas confidence
-const confVal    = document.getElementById("conf-val");     // Label angka persentase slider (cth: 50%)
-
-// Pilihan Sumber Kamera
-const camSelect  = document.getElementById("cam-select");   // Dropdown pilihan (Kamera 0, Kamera 1, IP Cam)
-const camInput   = document.getElementById("cam-input");    // Input teks URL untuk DroidCam / IP Cam
-
-// ------------------------------------------------------------------------------
-// VISIBILITAS INPUT URL KAMERA
-// ------------------------------------------------------------------------------
-// Menampilkan kolom input teks hanya jika pengguna memilih opsi "IP Camera / DroidCam"
-function updateCamInputVisibility() {
-  if (camSelect.value === "url") {
-    camInput.style.display = "block";
-  } else {
-    camInput.style.display = "none";
-  }
-}
-camSelect.addEventListener("change", updateCamInputVisibility);
-updateCamInputVisibility();
+const confVal    = document.getElementById("conf-val");     // Label angka persentase slider (default 60%)
 
 /* ─── KONTROL API SISTEM (START, STOP, CONFIG) ────────────────────────────── */
 
@@ -67,17 +49,10 @@ btnStart.addEventListener("click", async () => {
     const hl = document.getElementById("history-list");
     if (hl) hl.innerHTML = '<div style="font-size: 0.75rem; color: var(--dim); text-align: center; padding: 10px;">Belum ada data</div>';
     
-    // Langkah B: Dapatkan sumber input kamera terpilih
-    let camVal = camSelect.value;
-    if (camVal === "url") {
-      camVal = camInput.value;
-    }
-    
-    // Langkah C: Kirim request POST ke backend Flask untuk menyalakan kamera
+    // Langkah B: Kirim request POST ke backend Flask untuk menyalakan kamera Raspberry Pi
     await fetch("/api/start", { 
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cam_index: camVal })
+      headers: { "Content-Type": "application/json" }
     });
     
     // Ubah status tombol di tampilan

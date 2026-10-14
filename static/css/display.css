@@ -74,11 +74,11 @@ html, body {
 }
 
 /* ══════════════════════════════════════════
-   LAYOUT — dua kolom
+   LAYOUT — dua kolom (Area video lebih lebar)
 ══════════════════════════════════════════ */
 #disp-layout {
   display: grid;
-  grid-template-columns: 1fr 360px;
+  grid-template-columns: 1fr 340px;
   height: calc(100vh - var(--header-h));
   overflow: hidden;
 }
@@ -89,8 +89,8 @@ html, body {
 #video-panel {
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  gap: 12px;
+  padding: 12px 16px;
+  gap: 10px;
   overflow: hidden;
 }
 

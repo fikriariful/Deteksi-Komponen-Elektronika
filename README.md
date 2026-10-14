@@ -23,10 +23,10 @@ Proyek ini merupakan bagian dari penelitian Tugas Akhir di **Universitas Riau**,
 ### 🌟 Fitur Utama
 - **Model Edge AI Ringan:** Menggunakan arsitektur YOLOv8n yang diekspor ke format ONNX (ONNX Runtime CPU), dioptimalkan untuk perangkat edge tanpa GPU.
 - **Zona Inspeksi Cerdas (ROI Debouncing):** Deteksi komponen difokuskan pada area tengah (ROI kuning). Pencatatan ke database dilakukan **tepat satu kali** saat komponen keluar dari zona inspeksi untuk mencegah duplikasi data.
-- **Dukungan Multi-Kamera Fleksibel:** Mendukung modul **Raspberry Pi Camera Rev 1.3 (CSI via Picamera2)**, Webcam USB eksternal, hingga IP Camera / DroidCam via WiFi.
+- **Dedicated Raspberry Pi Camera (CSI):** Terintegrasi langsung dengan modul sensor **Raspberry Pi Camera Rev 1.3** menggunakan driver native `Picamera2` dan `libcamera`.
 - **Streaming & Telemetri Real-Time:** Video MJPEG berlatensi rendah serta pembaruan data telemetri (kelas, akurasi, waktu inferensi) menggunakan *Server-Sent Events* (SSE).
 - **Penyimpanan & Ekspor Data:** Riwayat deteksi tersimpan otomatis di SQLite lokal dan dapat diunduh langsung dalam format **CSV / Excel**.
-- **Optimasi Khusus Edge Device (Raspberry Pi 4):** Dilengkapi *warmup retries*, *frame skipping*, dan *thread-safe bufferless streaming* agar konsumsi CPU tetap rendah dan stabil tanpa lag.
+- **Optimasi Khusus Edge Device (Raspberry Pi 4):** Dilengkapi *warmup retries*, *frame skipping* (3x), resolusi 320x320, dan *thread-safe bufferless streaming* agar konsumsi CPU tetap rendah dan stabil tanpa lag.
 
 ---
 
@@ -192,15 +192,12 @@ python3 app.py
 
 ## 📱 Panduan Penggunaan Antarmuka Web
 
-1. **Akses Dashboard:** Buka alamat URL aplikasi melalui browser.
-2. **Pilih Sumber Kamera:**
-   - `Kamera Raspberry Pi / USB (Kamera 0)`: Kamera pita CSI atau webcam utama.
-   - `Kamera USB Eksternal (Kamera 1)`: Kamera USB kedua.
-   - `IP Camera / DroidCam WiFi`: Masukkan URL stream video HTTP (misalnya dari aplikasi DroidCam).
-3. **Mulai Deteksi:** Klik **"▶ Mulai Deteksi"** untuk mengaktifkan pipeline AI dan memulai sesi pencatatan baru.
+1. **Akses Dashboard:** Buka alamat URL aplikasi melalui browser (`http://<IP-RASPBERRY-PI>:5000`).
+2. **Kesiapan Perangkat Kamera:** Sistem secara otomatis mendeteksi dan menginisialisasi modul Raspberry Pi Camera Rev 1.3 via `Picamera2`.
+3. **Mulai Deteksi:** Klik tombol **"▶ Mulai Deteksi"** untuk mengaktifkan pipeline AI dan memulai sesi pencatatan baru.
 4. **Inspeksi Komponen:** Lewatkan komponen elektronika melalui **Kotak Zona Inspeksi (Kuning)**. Komponen akan dicatat otomatis setelah melintasi zona.
-5. **Sesuaikan Sensitivitas:** Atur slider ambang batas *Confidence* (disarankan 50%–65%).
-6. **Ekspor Data:** Klik **"⏹ Hentikan"** untuk mengakhiri sesi deteksi dan mengunduh laporan rekapitulasi data dalam format **CSV / Excel**.
+5. **Sesuaikan Ambang Batas:** Atur slider *Ambang Batas Confidence* jika diperlukan (default terpasang optimal pada **60%**).
+6. **Ekspor Data:** Klik tombol **"⏹ Hentikan"** untuk mengakhiri sesi deteksi dan mengunduh laporan rekapitulasi data dalam format **CSV / Excel**.
 
 ---
 
