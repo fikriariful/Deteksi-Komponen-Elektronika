@@ -2,5 +2,4 @@ flask
 ultralytics
 opencv-python
 numpy
-onnx
-onnxruntime
+ncnn
